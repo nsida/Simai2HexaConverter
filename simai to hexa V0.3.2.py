@@ -1,10 +1,13 @@
 '''HexaStageTool
-
-
+v0.3.2
+new feature
+warning 
+irrational beat will limit to 4 decimal places
+multiple{}in the same beat do not have a fail safe mechanism
+compound hit times now show interger
 
 
 '''
-
 
 import re #import regex module
 
@@ -16,8 +19,8 @@ warn_syllabus = []
 
 start_beat = float(input("Please input starting Beat or input nothing for 0 (Default is 0):") or 0)
 
-iputstrbackup = "{16}1to<1:1>lin,3tAx<45:37>ios,5tPx<0.1:99.99>i5,cax<3:1.3>io2,spx<97:-1.25>ioel/1/2/3,{8}2,1,2l[4:1],3cl[1:20],4k[.1:8],"
-dummystr = "{16}1to<1:1>lin,3tAx<45:37>ios,5tPx<0.1:99.99>i5,cax<3:1.3>io2,spx<97:-1.25>ioel/1/2/3,{8}2,1,2l[4:1],3cl[1:2],4k[.1:8],"
+
+dummystr = "{4}1to<1:1>lin/1cl[#16.5555555],1k[81.5:6],1cl[1:7],,1l[1:7]/1,3tAx<45:37>ios,5tPx<0.1:99.99>i5,cax<3:1.3>io2,spx<97:-1.25>ioel/1/2/3,{8}2,1,2l[4:1],3cl[1:2],4k[.1:8],"
 inputstr = input("Please input hex-com string (or input nothing for dummy_test_string):") or dummystr
 
 teststr =  inputstr.replace("\n","") #remove all \n
@@ -93,19 +96,17 @@ easing_dict = {'lin':'Linear',
                }
 
 
-
-
 lane_pos_dict = {'1':'rt','2':'rc','3':'rb','4':'lb','5':'lc','6':'lt'}
+common_time_signatures = [128,96,64,48,32,24,16,12,8,6,4,3,2,1]
 
 def error_message(num):
     print(f"error code: {num}")
 
-def fail_syl_msg():
-    failed_syllabus.append("Beat "+str(cur_beat)+": "+str(syllist[cur]))
+def warn_syl_msg(reason):
+    warn_syllabus.append("Beat "+ str(round(cur_beat,4))+": "+str(syllist[cur]) + " (reason: " + reason +")" )
 
-def stage_action():
-    
-    pass
+def fail_syl_msg(reason):
+    failed_syllabus.append("Beat "+ str(round(cur_beat,4))+": "+str(syllist[cur]))
 
 
 def brac_num(XXX):
@@ -129,7 +130,7 @@ def simple_note():
         fail_syl_msg()
 
     note_pos = lane_pos_dict[str(re.findall("^[1-6]",temp)).replace("[","").replace("]","").replace("\'","")]
-    final_output.append(f"n {note_type} {note_pos} {cur_beat}")
+    final_output.append(f"n {note_type} {note_pos} {round(cur_beat,4)}")
 
 
 
@@ -186,17 +187,19 @@ def stage_action():
 
 
     if   re.match("^[1-6]to",temp):
-        print (f"a changeopacity {change_object} {note_pos} {cur_beat} {duration} {amount} {easing}")
-        final_stage_output.append(f"a changeopacity {change_object} {note_pos} {cur_beat} {duration} {amount} {easing}")
+        if amount > 1 or amount < 0:
+            warn_syl_msg("opacity out of range")
+        print (f"a changeopacity {change_object} {note_pos} {round(cur_beat,4)} {duration} {amount} {easing}")
+        final_stage_output.append(f"a changeopacity {change_object} {note_pos} {round(cur_beat,4)} {duration} {amount} {easing}")
         #a changeopacity trail rt 195.3 4 0.5 Linear
         
     elif re.match("^[1-6]t[apAP]",temp):
-        final_stage_output.append(f"a s_move{change_object} {attribute} {axis} {cur_beat} {duration} {amount} {easing}")
-        print (f"a s_move{change_object} {note_pos} {attribute} {axis} {cur_beat} {duration} {amount} {easing}")
+        final_stage_output.append(f"a s_move{change_object} {attribute} {axis} {round(cur_beat,4)} {duration} {amount} {easing}")
+        print (f"a s_move{change_object} {note_pos} {attribute} {axis} {round(cur_beat,4)} {duration} {amount} {easing}")
         
     elif re.match("^[sc][apAP][xyz]<",temp):
-        final_stage_output.append(f"a s_move{change_object} {attribute} {axis} {cur_beat} {duration} {amount} {easing}")
-        print (f"a s_move{change_object} {attribute} {axis} {cur_beat} {duration} {amount} {easing}")
+        final_stage_output.append(f"a s_move{change_object} {attribute} {axis} {round(cur_beat,4)} {duration} {amount} {easing}")
+        print (f"a s_move{change_object} {attribute} {axis} {round(cur_beat,4)} {duration} {amount} {easing}")
         #a s_movetrail rt position z 195.3 4 0.5 Linear
         
     else:
@@ -240,7 +243,7 @@ def complex_note():
         print("it is a compound")
     else:
         print("not a valid complex note format")
-        fail_syl_msg()
+        fail_syl_msg("not a valid complex note format")
     print(temp)
   
     num_1 = str(re.findall("^[1-6]",temp)).replace("\'","").replace("[","").replace("]","")
@@ -258,14 +261,14 @@ def complex_note():
  
 
     if note_type == "compound":
-        final_output.append(f"n {note_type} {note_pos} {cur_beat} {cur_beat+float(num_2)} {float(num_3)}")
-        print(f"n {note_type} {note_pos} {cur_beat} {cur_beat+float(num_2)} {int(num_3)}")
+        final_output.append(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat+float(num_2)),4)} {'%.0f' %float(num_3)}")
+        print(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat+float(num_2)),4)} {'%.0f' %int(num_3)}")
     elif data_format == ":":
-        final_output.append(f"n {note_type} {note_pos} {cur_beat} {cur_beat + 4 * float(num_3) / float(num_2)}")
-        print(f"n {note_type} {note_pos} {cur_beat} {cur_beat + 4 * float(num_3) / float(num_2)}")
+        final_output.append(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat + 4 * float(num_3) / float(num_2)),4)}")
+        print(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat + 4 * float(num_3) / float(num_2)),4)}")
     elif data_format == "#" :
-        final_output.append(f"n {note_type} {note_pos} {cur_beat} {cur_beat+float(num_4)}")
-        print(f"n {note_type} {note_pos} {cur_beat} {cur_beat+float(num_4)}")
+        final_output.append(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat+float(num_4)),4)}")
+        print(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat+float(num_4)),4)}")
     
 
     
@@ -281,19 +284,19 @@ while cur < len(syllist):
 
 ###check for time signature and get rid of it
 
-    if re.findall("^{#(\d*\.)?\d+}", syllist[cur]) or re.findall("^{(\d*\.)?\d+}", syllist[cur]) :
+    if re.findall("\)?{#(\d*\.)?\d+}", syllist[cur]) or re.findall("\)?{(\d*\.)?\d+}", syllist[cur]) :
         print("found time signature")
         temp = syllist[cur]#copy the data out of syllist[cur] to not mess up the original data
         print(temp) 
 
-        if re.findall("^{#(\d*\.)?\d+}",temp):
+        if re.findall("{#(\d*\.)?\d+}",temp):
             time_sign_temp = (re.findall("{#\d+[.]*[\d+]*}",temp))[0]
             print(f"time signature found is {time_sign_temp}")
             temp_behind = temp.replace(time_sign_temp,"")
             note_int = 4 / float(time_sign_temp.replace("{","").replace("}","").replace("#",""))
             print(f"time signature have been changed to {note_int}")
             
-        elif re.findall("^{(\d*\.)?\d+}",temp):
+        elif re.findall("{(\d*\.)?\d+}",temp):
             time_sign_temp = (re.findall("{\d+[.]*[\d+]*}",temp))[0]
             print(f"time signature found is {time_sign_temp}")
             temp_behind = temp.replace(time_sign_temp,"")
@@ -301,10 +304,18 @@ while cur < len(syllist):
             print(f"time signature have been changed to {note_int}")
         else:
             print("It is a time signature but could not recognise")
-            fail_syl_msg()
-            
-        syllist[cur] = temp_behind
-        print(f"temp behind is {temp_behind}")
+            fail_syl_msg("It is a time signature but could not recognise")
+
+
+        if note_int not in common_time_signatures: #not working
+            warn_syl_msg(f"{note_int} is not a common time signature")
+        else:
+            print("it IS a common time signature")
+        try:        
+            syllist[cur] = temp_behind
+            print(f"temp behind is {temp_behind}")
+        except:
+            pass
     else:
         print("no time signature")
 
@@ -344,15 +355,14 @@ while cur < len(syllist):
             
         else:
             print("item unregonisable")
-            fail_syl_msg()
+            fail_syl_msg("item unregonisable")
 
-            
             
         #note detection ends
     
 
         both_token -= 1 #subtract 1 both_token for the while loop
-        try:  #(try) to put the next item in the both_list onto the first slot
+        try:  #(try to) put the next item in the both_list onto the first slot
             del both_list[0]
             print(f"first element in both Deleted,both list now:{both_list}")
             syllist[cur] = str(both_list[0])
@@ -366,22 +376,29 @@ while cur < len(syllist):
     cur_beat = cur_beat + (4/note_int) # move to the next beat number
 
         
-print("whole process finished!!! generating hexa chart format...")
+print("whole process finished!!!")
 
-print ("-"*100+"\nHexa chart data:")
+print ("-"*50)
 
+print("Warning:")
+for x in warn_syllabus:
+    print (x)
+
+print ("-"*50)
 
 print("Problems:")
 for x in failed_syllabus:
     print (x)
     
-print ("-"*100)
+print ("-"*50)
 
+print("Final_output:")
 for x in final_output:
     print (x)
     
-print ("-"*100)
+print ("-"*50)
 
+print("Stage:")
 for x in final_stage_output:
     print (x)
 

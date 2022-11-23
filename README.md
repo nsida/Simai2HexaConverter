@@ -9,15 +9,16 @@ simai to hexa V0.1.0
 {4}指4分拍間距,每個逗號都是1拍子間距
 {#4}是4拍子間距，每個逗號都是4拍子間距
 {}裏的數字 = 4 / {#}裏的數字
+
 所以{16}1,1,1,1,跟{#0.25}1,1,1,1, 一樣
 
 
 以下是note/語法的種類:
 
 這是軌道的編號,例如1就是rt,2是rc,一直到6是lt
-   6 1
- 5     2   <----這樣
-   4 3
+   6  1
+ 5        2   <----這樣
+    4  3
 
 {}:拍子間距符號，這個括號裏的數字代表之後所有逗號(,)都是的拍子間距
 單數字: 代表short，格式是軌道編號
@@ -129,14 +130,24 @@ G:下列的算式簡稱:
                'oel':'EaseOutElastic',
                'ioel':'EaseInOutElastic',  
 
-已知bug:
-未支援movecamera
-changeopacity未有限制0~1
-movecamera/movestage 在output裏會多出一個空格
-4個字母的運鏡算式簡稱未被正常讀取
 
-預定改動:
-bug fix
-增加warning:如發現不正常的note，不影響output結果的情況下把note加到warning list(例如把opacity改到大於1)
+
+V0.3.2
+已修正bug:
+1.已修正未支援movecamera
+2.changeopacity不在0~1的範圍的時候會把note加進warning list
+3.已修正movecamera/movestage在output裏會多出一個空格
+4.4個字母的運鏡算式簡稱可以被正常讀取
+5.同一拍内存在兩個或以上調整time signature的{}括號會導致程式崩潰，現在只會read不到該拍的内容
+
+新功能:
+
+新增警告列表(input被認爲可能是input有錯的情況下會被加進warning list)
+   例如opacity調整到0以下或1以上
+   是用不正常的time signature,例如{7}分拍子
+
+final_output數字美化
+   多於4小數位會直接round成4個小數位
+   c ompound音符所需打擊數現在顯示整數(應該沒辦法打到0.5下吧)
 
 
