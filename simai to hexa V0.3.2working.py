@@ -7,11 +7,55 @@ multiple{}in the same beat do not have a fail safe mechanism
 compound hit times now show interger
 v0.3.3
 預定功能
-用()detect bpm
-section offset:0 bpm:120
+用()detect bpm DONE(未有用途,原本打算section offset:0 bpm:120)
 syl E 可以reset cur_beat回 =0,方便note跟運鏡分開寫
+E(bpm){time_sign}note/stage_movement
+你可以用E來分隔開音符運鏡，甚至不同種類的雲鏡也可以分隔開
+
+例如
+{4},{16}6,5c,4c,3c,2c,1c,6c,5c,4c/1,2c,3c,4c,5c,6c,1c,2c,3o/4o,
+E
+{4},,,,,{1}caz[4:15]ios,caz[8:-30]ios,,caz[8:30]ios,,caz[8:-30]ios,,caz[4:75]is,
+E
+{4},,,,,{1}cpz[8:-2]lin,,,,,,cpz[4:2]i2,
+
+出來的結果會是
+--------------------------------------------------
+n short lt 1.0
+n catch lc 1.25
+n catch lb 1.5
+n catch rb 1.75
+n catch rc 2.0
+n catch rt 2.25
+n catch lt 2.5
+n catch lc 2.75
+n catch lb 3.0
+n short rt 3.0
+n catch rc 3.25
+n catch rb 3.5
+n catch lb 3.75
+n catch lc 4.0
+n catch lt 4.25
+n catch rt 4.5
+n catch rc 4.75
+n swipe out rb 5.0
+n swipe out lb 5.0
+--------------------------------------------------
+a s_movecamera angle z 5.0 4.0 15.0 EaseInOutSine
+a s_movecamera angle z 9.0 8.0 -30.0 EaseInOutSine
+a s_movecamera angle z 17.0 8.0 30.0 EaseInOutSine
+a s_movecamera angle z 25.0 8.0 -30.0 EaseInOutSine
+a s_movecamera angle z 33.0 4.0 75.0 EaseInSine
+a s_movecamera position z 5.0 8.0 -2.0 Linear
+a s_movecamera position z 29.0 4.0 2.0 EaseInQuad
+--------------------------------------------------
+
+現在hexcom.hard.txt
+
+
 '''
 
+import shutil
 import re #import regex module
 
 final_output = []
@@ -23,8 +67,13 @@ now_bpm = 0.0
 start_beat = float(input("Please input starting Beat or input nothing for 0 (Default is 0):") or 0)
 
 
-dummystr = "{4}1to<1:1>lin/1cl[#16.5555555],1k[81.5:6],1cl[1:7],,1l[1:7]/1,3tAx<45:37>ios,5tPx<0.1:99.99>i5,cax<3:1.3>io2,spx<97:-1.25>ioel/1/2/3,{8}2,1,2l[4:1],3cl[1:2],4k[.1:8],"
-inputstr = input("Please input hex-com string (or input nothing for dummy_test_string):") or dummystr
+dummystr = "(170){4}1cl[#16.5555555],1k[81.5:6],(165)1cl[1:7],,1l[1:7]/1,E1to<1:1>lin/3tAx<45:37>ios,5tPx<0.1:99.99>i5,cax<3:1.3>io2,spx<97:-1.25>ioel/1/2/3,{8}2,1,2l[4:1],3cl[1:2],4k[.1:8],"
+try:
+    hexcom_file = open("hexcom.hard.txt","r",encoding="utf-8")
+    inputstr = hexcom_file.read()
+    print(f"Input string read from file is: {inputstr}")
+except:
+    print("could not read hex-com.hard.txt")
 
 teststr =  inputstr.replace("\n","") #remove all \n
 
@@ -284,46 +333,39 @@ while cur < len(syllist):
 
     print ("processing syllabus '" + syllist[cur]+"'")
 
+    if re.match ("^E", syllist[cur]):
+        cur_beat = 0.0
+        syllist[cur] = syllist[cur].replace("E","")
     
-    #####change this to detect (bpm)
-    if re.findall("\((\d*\.)?\d+\)", syllist[cur])
+    if re.findall("\((\d*\.)?\d+\)", syllist[cur]):
         print("found BPM")
         temp = syllist[cur]#copy the data out of syllist[cur] to not mess up the original data
         print(temp) 
 
-        now_bpm_temp = float(str(re:findall("\((\d*\.)?\d+\)",temp)).replace("(","").replace(")","").replace("[","").replace("]","").replace("\'",""))
+        now_bpm_temp = str(re.findall("\((\d*\.)?\d+\)",temp)).replace("(","").replace(")","").replace("[","").replace("]","").replace("\'","")
 
-        if re.findall("{#(\d*\.)?\d+}",temp):
-            time_sign_temp = (re.findall("{#\d+[.]*[\d+]*}",temp))[0]
-            print(f"time signature found is {time_sign_temp}")
-            temp_behind = temp.replace(time_sign_temp,"")
-            note_int = 4 / float(time_sign_temp.replace("{","").replace("}","").replace("#",""))
-            print(f"time signature have been changed to {note_int}")
+        if re.findall("\((\d*\.)?\d+\)",temp):
+            now_bpm_temp = (re.findall("\(\d+[.]*[\d+]*\)",temp))[0]
+            print(f"BPM found is {now_bpm_temp}")
+            temp_behind = temp.replace(now_bpm_temp,"")
+            now_bpm = float(now_bpm_temp.replace("(","").replace(")",""))
+            print(f"time signature have been changed to {now_bpm}")
             
-        elif re.findall("{(\d*\.)?\d+}",temp):
-            time_sign_temp = (re.findall("{\d+[.]*[\d+]*}",temp))[0]
-            print(f"time signature found is {time_sign_temp}")
-            temp_behind = temp.replace(time_sign_temp,"")
-            note_int = float(time_sign_temp.replace("{","").replace("}",""))
-            print(f"time signature have been changed to {note_int}")
+    
         else:
-            print("It is a time signature but could not recognise")
-            fail_syl_msg("It is a time signature but could not recognise")
+            print("It is a BPM but could not recognise")
+            fail_syl_msg("It is a BPM but could not recognise")
 
 
-        if note_int not in common_time_signatures: #not working
-            warn_syl_msg(f"{note_int} is not a common time signature")
-        else:
-            print("it IS a common time signature")
         try:        
             syllist[cur] = temp_behind
             print(f"temp behind is {temp_behind}")
         except:
             pass
     else:
-        print("no time signature")
+        print("no BPM")
     
-    #####change this to detect (bpm)
+
 
 
     
@@ -390,10 +432,10 @@ while cur < len(syllist):
         elif re.match("^[1-6](k|cl|l)<(\d*\.)?\d+:\d+>$",syllist[cur]) or re.match("^[1-6](cl|l)<#(\d*\.)?\d+>$",syllist[cur]):
             complex_note()
             print("complex")
+            
         elif re.match("^(([1-6]to)|(([1-6]t|s|c)((a|p|A|P)[xyz])))<(\d*\.)?\d+:-?(\d*\.)?\d+>...*$",syllist[cur]):
             stage_action()
-            print("stage_action found")
-            
+            print("stage_action found")                
 
         elif syllist[cur] =="":
             print("Empty Note")
@@ -423,12 +465,14 @@ while cur < len(syllist):
         
 print("whole process finished!!!")
 
-print ("-"*50)
 
+print ("-"*50)
+print ("Generated by Simai2HexaConverter V0.3")
+print ("-"*50)
 print("Warning:")
 for x in warn_syllabus:
     print (x)
-
+    
 print ("-"*50)
 
 print("Problems:")
@@ -446,6 +490,44 @@ print ("-"*50)
 print("Stage:")
 for x in final_stage_output:
     print (x)
+
+print ("-"*50)
+overwrite_choice = input("Do you want to overwrite lines in chart.hard.txt?(Y/N)")
+if overwrite_choice == "Y":
+    shutil.copy("chart.hard.txt","chart.hard_backup.txt")#make a copy of the oringinal file in case the programme fucked up something
+    output_file = open("chart.hard.txt","r",encoding="utf-8")
+
+    storage = []#store the needed lines
+
+    for line in output_file.readlines():#find lines that are NOT start with a or n and put the line in storage[]
+        if re.match("^[an] .+",line) or re.match("^-+",line) or re.match("^Generated by ",line): 
+            print("Delete: " + line)
+            storage.append("")
+        else:
+            print("Preserve: " + line)
+            storage.append(line)
+
+    output_file.close()   #reopen the file in write mode
+    output_file = open("chart.hard.txt","w",encoding="utf-8")
+        
+    for line in storage:    #write all the lines saved in storage[]
+        output_file.writelines(line)
+    output_file.writelines("-"*50+"\n")
+    output_file.writelines("Generated by simai2hexaconverter V0.3"+"\n")
+    output_file.writelines("-"*50+"\n")
+    for line in final_output:#write all the lines saved in final_output[]
+        output_file.writelines(line+"\n")
+    output_file.writelines("-"*50+"\n")
+    for line in final_stage_output:#write all the lines saved in final_output[]
+        output_file.writelines(line+"\n")    
+    output_file.writelines("-"*50+"\n")  
+    output_file.close()
+elif overwrite_choice == "N":
+    print("dontdothis")
+else:
+    print("whatareudoing")
+    
+
 
 
 

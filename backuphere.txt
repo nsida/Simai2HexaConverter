@@ -1,0 +1,30 @@
+a movecamera position 5 8 0 0 -2 Linear
+a movecamera angle 5 4 0 0 15 EaseInOutSine
+a movecamera angle 9 8 0 0 -30 EaseInOutSine 
+a movecamera angle 17 8 0 0 30 EaseInOutSine
+a movecamera angle 25 8 0 0 -30 EaseInOutSine
+a movecamera angle 33 4 0 0 75 EaseInSine
+a movecamera position 33 4 0 0 2 EaseInQuad
+
+n short lt 1.00
+n catch lc 1.25
+n catch lb 1.5
+n catch rb 1.75
+n catch rc 2
+n catch rt 2.25
+n catch lt 2.50
+n catch lc 2.75
+n catch lb 3
+
+n short rt 3.00
+n catch rc 3.25
+n catch rb 3.50
+n catch lb 3.75
+n catch lc 4.00
+n catch lt 4.25
+n catch rt 4.50
+n catch rc 4.75
+
+n swipe out rb lb 5
+
+{4},{16}6,5c,4c,3c,2c,1c,6c,5c,4c/1,2c,3c,4c,5c,6c,1c,2c,3o/4o,E{4},,,,,{1}cpz[8:-2]lin/caz[4:15]ios,caz[8:-30]ios,,caz[8:30]ios,,caz[8:-30]ios,,caz[4:75]is/cpz[4:2]i2
