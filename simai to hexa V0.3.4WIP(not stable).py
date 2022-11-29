@@ -59,25 +59,24 @@ angle
 
  0.3.4預定:
  括號表示著譯 DONE
- 錯easing會崩潰 
+ 錯easing會崩潰 DONE
  問Y/N沒有隔行 Done
  debug print toggle Done
  支援hard以外的難度 Done
+ 
 '''
 
 import shutil
 import re #import regex module
+import os
+
+
 
 
 diff = input("Please input difficulty(filename) (For Example: Diff = hard):\nDiff = ")
 DEBUG = input("Enable Debug Mode?(T/F):") or "F"
 
 
-def log(s):
-    if DEBUG.lower() == "t" :
-        print(s)
-    else:
-        pass
 
 final_note_output = []
 final_action_output = []
@@ -88,11 +87,18 @@ now_bpm = 0.0
 start_beat = float(input("Please input starting Beat or input nothing for 0 (Default is 0):") or 0)
 
 
+def log(s):
+    if DEBUG.lower() == "t" :
+        print(s)
+    else:
+        pass
+    
 try:
     hexcom_file = open(f"hexcom.{diff}.txt","r",encoding="utf-8")
     inputstr = hexcom_file.read()
+    hexcom_file.close()
 except:
-    print(f"could not read hex-com.{diff}.txt")
+    print(f"could not read hexcom.{diff}.txt")
     inputstr = ""
 
 
@@ -102,7 +108,7 @@ teststr = inputstr.replace("\n","") #remove all \n
 
 teststr_delleftbrac = re.sub("\[","<",teststr)#replace [] with <> since [] messes with regex
 teststr_delbrac = re.sub("\]",">",teststr_delleftbrac)
-teststr_delbrac = re.sub("\(.+\)","", teststr_delbrac)#Remove "()" Content
+teststr_delbrac = re.sub("\(.+?\)","", teststr_delbrac)#Remove "()" Content
 
 syllist = teststr_delbrac.split(",") # use "," to determine the split
 log (syllist)
@@ -190,10 +196,23 @@ def fail_syl_msg(reason):
     failed_syllabus.append("Beat "+ str(round(cur_beat,4))+": "+str(syllist[cur]))
 
 
-def brac_num(XXX):
-    num1 = str(re.findall("<(\d*\.)?\d+:",XXX).replace("<","").replace(":","").replace("[","").replace("]","").replace("\'",""))
-    num2 = str(re.findall(":(\d*\.)?\d+>",XXX).replace(":","").replace(">","").replace("[","").replace("]","").replace("\'",""))
-    return(num1,num2)
+def find_colbrac_num(XXX):
+    x = re.findall("<(\d*\.)?\d+:",XXX)[0].replace("<","").replace(":","")
+    y = re.findall(":\d+>",XXX)[0].replace(":","").replace(">","")
+    return(x,y)
+
+def find_hashbrac_num(XXX):
+    x = re.findall("<#(\d*\.)?\d+>",XXX)[0].replace("<","").replace(">","").replace("#","")
+    return(x)
+
+def find_ease(YYY):
+    ease = easing_dict[re.findall(">.+$",YYY)[0].replace(">","")]
+    return(ease)
+
+def find_lane_name(ZZZ):
+    x = lane_pos_dict[re.findall("^[1-6]",ZZZ)[0]] 
+    return (x)
+
 
 def simple_note():
     temp = str(syllist[cur])
@@ -210,7 +229,7 @@ def simple_note():
         log("not a valid simple note format")
         fail_syl_msg()
 
-    note_pos = lane_pos_dict[re.findall("^[1-6]",temp)[0]]
+    note_pos = find_lane_name(temp)
     final_note_output.append(f"n {note_type} {note_pos} {round(cur_beat,4)}")
 
 
@@ -250,20 +269,19 @@ def complex_note():
         fail_syl_msg("not a valid complex note format")
     log(temp)
   
-    num_1 = re.findall("^[1-6]",temp)[0]
+    num_1 = find_lane_name(temp)
+    note_pos = lane_pos_dict[num_1]
     log("num_1 = " + num_1)
     if data_format == ":":
-        num_2 = re.findall("\d*\.*\d+:",temp)[0].replace(":","")
-        num_3 = re.findall(":\d+",temp)[0].replace(":","")
+        num_2,num_3 = find_colbrac_num()
+
         log("num_2 = " + num_2)
         log("num_3 = " + num_3)
     elif data_format == "#":
-        num_4 = re.findall("#.*>$",temp)[0].replace("#","").replace(">","")
+        num_4 = find_hashbrac_num()
         log("num_4 = " + num_4)
         
-    note_pos = lane_pos_dict[num_1]
- 
-
+    
     if note_type == "compound":
         final_note_output.append(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat+float(num_2)),4)} {'%.0f' %float(num_3)}")
         log(f"n {note_type} {note_pos} {round(cur_beat,4)} {round((cur_beat+float(num_2)),4)} {'%.0f' %int(num_3)}")
@@ -320,9 +338,12 @@ def stage_action():
         axis = "z"
     else:
         error_message(3)
-    
-    duration = float(re.findall("<\d*\.*\d+:",temp)[0].replace("<","").replace(":",""))
-    amount = float(re.findall(":-?\d*\.*\d+>",temp)[0].replace(":","").replace(">",""))
+
+    print (find_colbrac_num(temp)[0])
+    print (find_colbrac_num(temp)[1])
+    duration = find_colbrac_num(temp)[0]
+    amount = find_colbrac_num(temp)[0]
+
     try:
         easing = easing_dict[re.findall(">.+$",temp)[0].replace(">","")]
     except:
@@ -525,12 +546,12 @@ for x in final_action_output:
 
 print("-"*50)
 overwrite_choice = input(f"Do you want to directly overwrite lines in chart.{diff}.txt?(Y/N)\nY: Lines that start with a or n in chart.{diff}.txt will be overwrited\nN: Newly generated lines will be added under the existing lines in chart.{diff}.txt\n")
-if overwrite_choice == "Y" or overwrite_choice == "N" :
+if overwrite_choice.lower() == "y" or overwrite_choice.lower() == "n" :
     shutil.copy(f"chart.{diff}.txt",f"chart.{diff}_backup.txt")#make a copy of the oringinal file in case the programme fucked up something
     storage = []#store the needed lines
     output_file = open(f"chart.{diff}.txt","r",encoding="utf-8")    
     
-    if overwrite_choice == "Y":
+    if overwrite_choice.lower() == "y":
 
         for line in output_file.readlines():#find lines that are NOT start with a or n and put the line in storage[]
             output_file = open(f"chart.{diff}.txt","w",encoding="utf-8") 
@@ -540,7 +561,7 @@ if overwrite_choice == "Y" or overwrite_choice == "N" :
             else:
                 log("Preserve: " + line)
                 storage.append(line)
-    elif overwrite_choice == "N" :     
+    elif overwrite_choice.lower == "n" :     
         output_file = open(f"chart.{diff}.txt","a",encoding="utf-8")  
 
     
